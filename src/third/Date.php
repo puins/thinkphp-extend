@@ -532,4 +532,114 @@ class Date
 
         return $time->format($timestamp_format);
     }
+    
+    /**
+     * 格式化 UNIX 时间戳为人易读的字符串
+     *
+     * @param int    Unix 时间戳
+     * @param mixed $local 本地时间
+     *
+     * @return    string    格式化的日期字符串
+     */
+    public static function human($remote, $local = null)
+    {
+        $time_diff = (is_null($local) || $local ? time() : $local) - $remote;
+        $tense = $time_diff < 0 ? 'after' : 'ago';
+        $time_diff = abs($time_diff);
+        $chunks = [
+            [60 * 60 * 24 * 365, 'year'],
+            [60 * 60 * 24 * 30, 'month'],
+            [60 * 60 * 24 * 7, 'week'],
+            [60 * 60 * 24, 'day'],
+            [60 * 60, 'hour'],
+            [60, 'minute'],
+            [1, 'second'],
+        ];
+        $name = 'second';
+        $count = 0;
+
+        for ($i = 0, $j = count($chunks); $i < $j; $i++) {
+            $seconds = $chunks[$i][0];
+            $name = $chunks[$i][1];
+            if (($count = floor($time_diff / $seconds)) != 0) {
+                break;
+            }
+        }
+        return __("%d $name%s $tense", $count, ($count > 1 ? 's' : ''));
+    }
+
+    /**
+     * 获取一个基于时间偏移的Unix时间戳
+     *
+     * @param string $type     时间类型，默认为day，可选minute,hour,day,week,month,quarter,year
+     * @param int    $offset   时间偏移量 默认为0，正数表示当前type之后，负数表示当前type之前
+     * @param string $position 时间的开始或结束，默认为begin，可选前(begin,start,first,front)，end
+     * @param int    $year     基准年，默认为null，即以当前年为基准
+     * @param int    $month    基准月，默认为null，即以当前月为基准
+     * @param int    $day      基准天，默认为null，即以当前天为基准
+     * @param int    $hour     基准小时，默认为null，即以当前年小时基准
+     * @param int    $minute   基准分钟，默认为null，即以当前分钟为基准
+     * @return int 处理后的Unix时间戳
+     */
+    public static function unixtime($type = 'day', $offset = 0, $position = 'begin', $year = null, $month = null, $day = null, $hour = null, $minute = null)
+    {
+        $year = is_null($year) ? date('Y') : $year;
+        $month = is_null($month) ? date('m') : $month;
+        $day = is_null($day) ? date('d') : $day;
+        $hour = is_null($hour) ? date('H') : $hour;
+        $minute = is_null($minute) ? date('i') : $minute;
+        $position = in_array($position, array('begin', 'start', 'first', 'front'));
+
+        $baseTime = mktime(0, 0, 0, $month, $day, $year);
+
+        switch ($type) {
+            case 'minute':
+                $time = $position ? mktime($hour, $minute + $offset, 0, $month, $day, $year) : mktime($hour, $minute + $offset, 59, $month, $day, $year);
+                break;
+            case 'hour':
+                $time = $position ? mktime($hour + $offset, 0, 0, $month, $day, $year) : mktime($hour + $offset, 59, 59, $month, $day, $year);
+                break;
+            case 'day':
+                $time = $position ? mktime(0, 0, 0, $month, $day + $offset, $year) : mktime(23, 59, 59, $month, $day + $offset, $year);
+                break;
+            case 'week':
+                $weekIndex = date("w", $baseTime);
+                $time = $position ?
+                strtotime($offset . " weeks", strtotime(date('Y-m-d', strtotime("-" . ($weekIndex ? $weekIndex - 1 : 6) . " days", $baseTime)))) :
+                strtotime($offset . " weeks", strtotime(date('Y-m-d 23:59:59', strtotime("+" . (6 - ($weekIndex ? $weekIndex - 1 : 6)) . " days", $baseTime))));
+                break;
+            case 'month':
+                $_timestamp = mktime(0, 0, 0, $month + $offset, 1, $year);
+                $time = $position ? $_timestamp : mktime(23, 59, 59, $month + $offset, self::days_in_month(date("m", $_timestamp), date("Y", $_timestamp)), $year);
+                break;
+            case 'quarter':
+                $_month = date("m", mktime(0, 0, 0, (ceil(date('n', mktime(0, 0, 0, $month, $day, $year)) / 3) + $offset) * 3, $day, $year));
+                $time = $position ?
+                mktime(0, 0, 0, 1 + ((ceil(date('n', $baseTime) / 3) + $offset) - 1) * 3, 1, $year) :
+                mktime(23, 59, 59, (ceil(date('n', $baseTime) / 3) + $offset) * 3, self::days_in_month((ceil(date('n', $baseTime) / 3) + $offset) * 3, $year), $year);
+                break;
+            case 'year':
+                $time = $position ? mktime(0, 0, 0, 1, 1, $year + $offset) : mktime(23, 59, 59, 12, 31, $year + $offset);
+                break;
+            default:
+                $time = mktime($hour, $minute, 0, $month, $day, $year);
+                break;
+        }
+        return $time;
+    }
+
+    /**
+     * 获取指定年月拥有的天数
+     * @param int $month
+     * @param int $year
+     * @return false|int|string
+     */
+    public static function days_in_month($month, $year)
+    {
+        if (function_exists("cal_days_in_month")) {
+            return cal_days_in_month(CAL_GREGORIAN, $month, $year);
+        } else {
+            return date('t', mktime(0, 0, 0, $month, 1, $year));
+        }
+    }
 }
