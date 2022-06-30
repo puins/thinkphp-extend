@@ -532,7 +532,7 @@ class Date
 
         return $time->format($timestamp_format);
     }
-    
+
     /**
      * 格式化 UNIX 时间戳为人易读的字符串
      *
@@ -583,11 +583,11 @@ class Date
      */
     public static function unixtime($type = 'day', $offset = 0, $position = 'begin', $year = null, $month = null, $day = null, $hour = null, $minute = null)
     {
-        $year = is_null($year) ? date('Y') : $year;
-        $month = is_null($month) ? date('m') : $month;
-        $day = is_null($day) ? date('d') : $day;
-        $hour = is_null($hour) ? date('H') : $hour;
-        $minute = is_null($minute) ? date('i') : $minute;
+        $year = is_null($year) ? (int) date("Y") : (int) $year;
+        $month = is_null($month) ? (int) date("n") : (int) $month;
+        $day = is_null($day) ? (int) date("j") : (int) $day;
+        $hour = is_null($hour) ? (int) date("H") : (int) $hour;
+        $minute = is_null($minute) ? (int) date("i") : (int) $minute;
         $position = in_array($position, array('begin', 'start', 'first', 'front'));
 
         $baseTime = mktime(0, 0, 0, $month, $day, $year);
@@ -613,10 +613,10 @@ class Date
                 $time = $position ? $_timestamp : mktime(23, 59, 59, $month + $offset, self::days_in_month(date("m", $_timestamp), date("Y", $_timestamp)), $year);
                 break;
             case 'quarter':
-                $_month = date("m", mktime(0, 0, 0, (ceil(date('n', mktime(0, 0, 0, $month, $day, $year)) / 3) + $offset) * 3, $day, $year));
+                $_month = date("m", mktime(0, 0, 0, (int) (ceil((int) date('n', mktime(0, 0, 0, $month, $day, $year)) / 3) + $offset) * 3, $day, $year));
                 $time = $position ?
-                mktime(0, 0, 0, 1 + ((ceil(date('n', $baseTime) / 3) + $offset) - 1) * 3, 1, $year) :
-                mktime(23, 59, 59, (ceil(date('n', $baseTime) / 3) + $offset) * 3, self::days_in_month((ceil(date('n', $baseTime) / 3) + $offset) * 3, $year), $year);
+                mktime(0, 0, 0, 1 + (int) ((ceil((int) date('n', $baseTime) / 3) + $offset) - 1) * 3, 1, $year) :
+                mktime(23, 59, 59, (int) (ceil((int) date('n', $baseTime) / 3) + $offset) * 3, self::days_in_month((ceil(date('n', $baseTime) / 3) + $offset) * 3, $year), $year);
                 break;
             case 'year':
                 $time = $position ? mktime(0, 0, 0, 1, 1, $year + $offset) : mktime(23, 59, 59, 12, 31, $year + $offset);
